@@ -5,12 +5,39 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"text/template"
 )
 
 const port = "8080"
-const seperator = "-------------------------"
 
-var rooms []room
+const text = `CB Stats
+{{.Separator}}
+All Broadcasters: {{.BroadcasterCounts.a}}
+Female Broadcasters: {{.BroadcasterCounts.f}}
+Male Broadcasters: {{.BroadcasterCounts.m}}
+Couples Broadcasters: {{.BroadcasterCounts.c}}
+Trans Broadcasters: {{.BroadcasterCounts.s}}
+{{.Separator}}
+All Viewers: {{.ViewerCounts.a}}
+Female Viewers: {{.ViewerCounts.f}}
+Male Viewers: {{.ViewerCounts.m}}
+Couples Viewers: {{.ViewerCounts.c}}
+Trans Viewers: {{.ViewerCounts.s}}
+{{.Separator}}
+Unique Tags: {{.TagCounts | len}}
+Rooms With Tags: {{.RoomsWithTags}}
+Public Rooms: {{.TypeCounts.public}}
+Private Rooms: {{if .TypeCounts.private}}{{.TypeCounts.private}}{{- else}}0{{- end}}
+Group Rooms: {{if .TypeCounts.group}}{{.TypeCounts.group}}{{- else}}0{{- end}}
+Away Rooms: {{if .TypeCounts.away}}{{.TypeCounts.away}}{{- else}}0{{- end}}
+HD Rooms: {{.HDRooms}}
+New Rooms: {{.NewRooms}}
+{{.Separator}}
+Average Minutes: {{.AverageMinutes}}
+Average Age: {{.AverageAge}}
+Average Viewers: {{.AverageViewers}}
+Average Followers: {{.AverageFollowers}}
+`
 
 type room struct {
 	Username  string   `json:"username"`
@@ -24,6 +51,39 @@ type room struct {
 	Seconds   uint     `json:"seconds_online"`
 	Tags      []string `json:"tags"`
 }
+
+type statsStruct struct {
+	Separator         string
+	BroadcasterCounts map[string]uint
+	ViewerCounts      map[string]uint
+	TagCounts         map[string]uint
+	RoomsWithTags     uint
+	TypeCounts        map[string]uint
+	HDRooms           uint
+	NewRooms          uint
+	TotalSeconds      uint
+	TotalAge          uint
+	TotalFollowers    uint
+}
+
+func (s statsStruct) AverageMinutes() uint {
+	return s.TotalSeconds / s.BroadcasterCounts["a"] / 60
+}
+
+func (s statsStruct) AverageAge() uint {
+	return s.TotalAge / s.BroadcasterCounts["a"]
+}
+
+func (s statsStruct) AverageViewers() uint {
+	return s.ViewerCounts["a"] / s.BroadcasterCounts["a"]
+}
+
+func (s statsStruct) AverageFollowers() uint {
+	return s.TotalFollowers / s.BroadcasterCounts["a"]
+}
+
+var rooms []room
+var stats statsStruct
 
 func getRooms() {
 	resp, err := http.Get("http://chaturbate.com/affiliates/api/onlinerooms/?format=json&wm=qBlp5")
@@ -42,67 +102,43 @@ func getRooms() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	getRooms()
 
-	broadcasterCounts := make(map[string]uint)
-	viewerCounts := make(map[string]uint)
-	typeCounts := make(map[string]uint)
-	tagCounts := make(map[string]uint)
-	var tagCount uint
-	var hdCount uint
-	var newCount uint
-	var ageSum uint
-	var followersSum uint
-	var secondsSum uint
+	stats.Separator = "-------------------------"
+	stats.BroadcasterCounts = make(map[string]uint)
+	stats.ViewerCounts = make(map[string]uint)
+	stats.TagCounts = make(map[string]uint)
+	stats.TypeCounts = make(map[string]uint)
+
 	for _, room := range rooms {
-		broadcasterCounts[room.Gender]++
-		broadcasterCounts["a"]++
-		viewerCounts[room.Gender] += room.Viewers
-		viewerCounts["a"] += room.Viewers
+		stats.BroadcasterCounts[room.Gender]++
+		stats.BroadcasterCounts["a"]++
+		stats.ViewerCounts[room.Gender] += room.Viewers
+		stats.ViewerCounts["a"] += room.Viewers
 		if len(room.Tags) > 0 {
-			tagCount++
+			stats.RoomsWithTags++
 			for _, tag := range room.Tags {
-				tagCounts[tag]++
+				stats.TagCounts[tag]++
 			}
 		}
-		typeCounts[room.Type]++
+		stats.TypeCounts[room.Type]++
 		if room.IsHD {
-			hdCount++
+			stats.HDRooms++
 		}
 		if room.IsNew {
-			newCount++
+			stats.NewRooms++
 		}
-		ageSum += room.Age
-		followersSum += room.Followers
-		secondsSum += room.Seconds
+		stats.TotalAge += room.Age
+		stats.TotalFollowers += room.Followers
+		stats.TotalSeconds += room.Seconds
 	}
 
-	fmt.Fprintln(w, "CB Stats")
-	fmt.Fprintln(w, seperator)
-	fmt.Fprintln(w, "Broadcasters:", broadcasterCounts["a"])
-	fmt.Fprintln(w, "Females:", broadcasterCounts["f"])
-	fmt.Fprintln(w, "Males:", broadcasterCounts["m"])
-	fmt.Fprintln(w, "Couples:", broadcasterCounts["c"])
-	fmt.Fprintln(w, "Trans:", broadcasterCounts["s"])
-	fmt.Fprintln(w, seperator)
-	fmt.Fprintln(w, "Viewers:", viewerCounts["a"])
-	fmt.Fprintln(w, "Females:", viewerCounts["f"])
-	fmt.Fprintln(w, "Males:", viewerCounts["m"])
-	fmt.Fprintln(w, "Couples:", viewerCounts["c"])
-	fmt.Fprintln(w, "Trans:", viewerCounts["s"])
-	fmt.Fprintln(w, seperator)
-	fmt.Fprintln(w, "Unique Tags:", len(tagCounts))
-	fmt.Fprintln(w, "Rooms With Tags:", tagCount)
-	fmt.Fprintln(w, "Public Rooms:", typeCounts["public"])
-	fmt.Fprintln(w, "Private Rooms:", typeCounts["private"])
-	fmt.Fprintln(w, "Group Rooms:", typeCounts["group"])
-	fmt.Fprintln(w, "Away Rooms:", typeCounts["away"])
-	fmt.Fprintln(w, "HD Rooms:", hdCount)
-	fmt.Fprintln(w, "New Rooms:", newCount)
-	fmt.Fprintln(w, seperator)
-	fmt.Fprintln(w, "Average Minutes:", secondsSum/broadcasterCounts["a"]/60.0)
-	fmt.Fprintln(w, "Average Age:", ageSum/broadcasterCounts["a"])
-	fmt.Fprintln(w, "Average Viewers:", viewerCounts["a"]/broadcasterCounts["a"])
-	fmt.Fprintln(w, "Average Followers:", followersSum/broadcasterCounts["a"])
-
+	tmpl, err := template.New("cbstats").Parse(text)
+	if err != nil {
+		panic(err)
+	}
+	err = tmpl.Execute(w, stats)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
