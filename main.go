@@ -10,35 +10,6 @@ import (
 
 const port = "8080"
 
-const text = `CB Stats
-{{.Separator}}
-All Broadcasters: {{.BroadcasterCounts.a}}
-Female Broadcasters: {{.BroadcasterCounts.f}}
-Male Broadcasters: {{.BroadcasterCounts.m}}
-Couples Broadcasters: {{.BroadcasterCounts.c}}
-Trans Broadcasters: {{.BroadcasterCounts.s}}
-{{.Separator}}
-All Viewers: {{.ViewerCounts.a}}
-Female Viewers: {{.ViewerCounts.f}}
-Male Viewers: {{.ViewerCounts.m}}
-Couples Viewers: {{.ViewerCounts.c}}
-Trans Viewers: {{.ViewerCounts.s}}
-{{.Separator}}
-Unique Tags: {{.TagCounts | len}}
-Rooms With Tags: {{.RoomsWithTags}}
-Public Rooms: {{.TypeCounts.public}}
-Private Rooms: {{if .TypeCounts.private}}{{.TypeCounts.private}}{{- else}}0{{- end}}
-Group Rooms: {{if .TypeCounts.group}}{{.TypeCounts.group}}{{- else}}0{{- end}}
-Away Rooms: {{if .TypeCounts.away}}{{.TypeCounts.away}}{{- else}}0{{- end}}
-HD Rooms: {{.HDRooms}}
-New Rooms: {{.NewRooms}}
-{{.Separator}}
-Average Minutes: {{.AverageMinutes}}
-Average Age: {{.AverageAge}}
-Average Viewers: {{.AverageViewers}}
-Average Followers: {{.AverageFollowers}}
-`
-
 type room struct {
 	Username  string   `json:"username"`
 	Gender    string   `json:"gender"`
@@ -53,7 +24,6 @@ type room struct {
 }
 
 type statsStruct struct {
-	Separator         string
 	BroadcasterCounts map[string]uint
 	ViewerCounts      map[string]uint
 	TagCounts         map[string]uint
@@ -102,7 +72,6 @@ func getRooms() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	getRooms()
 
-	stats.Separator = "-------------------------"
 	stats.BroadcasterCounts = make(map[string]uint)
 	stats.ViewerCounts = make(map[string]uint)
 	stats.TagCounts = make(map[string]uint)
@@ -131,7 +100,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		stats.TotalSeconds += room.Seconds
 	}
 
-	tmpl, err := template.New("cbstats").Parse(text)
+	tmpl, err := template.New("cbstats").Parse(Text)
 	if err != nil {
 		panic(err)
 	}
