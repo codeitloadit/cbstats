@@ -1,6 +1,11 @@
 package main
 
-const Text = `CB Stats
+import (
+	"html/template"
+	"io"
+)
+
+const text = `CB Stats
 -------------------------
 All Broadcasters: {{.BroadcasterCounts.a}}
 Female Broadcasters: {{.BroadcasterCounts.f}}
@@ -17,9 +22,9 @@ Trans Viewers: {{.ViewerCounts.s}}
 Unique Tags: {{.TagCounts | len}}
 Rooms With Tags: {{.RoomsWithTags}}
 Public Rooms: {{.TypeCounts.public}}
-Private Rooms: {{if .TypeCounts.private}}{{.TypeCounts.private}}{{- else}}0{{- end}}
-Group Rooms: {{if .TypeCounts.group}}{{.TypeCounts.group}}{{- else}}0{{- end}}
-Away Rooms: {{if .TypeCounts.away}}{{.TypeCounts.away}}{{- else}}0{{- end}}
+Private Rooms: {{.TypeCounts.private}}
+Group Rooms: {{.TypeCounts.group}}
+Away Rooms: {{.TypeCounts.away}}
 HD Rooms: {{.HDRooms}}
 New Rooms: {{.NewRooms}}
 -------------------------
@@ -28,3 +33,12 @@ Average Age: {{.AverageAge}}
 Average Viewers: {{.AverageViewers}}
 Average Followers: {{.AverageFollowers}}
 `
+
+// RenderText renders the template to the specified writer.
+func RenderText(w io.Writer) {
+	tmpl, err := template.New("cbstats").Parse(text)
+	HandleError(err)
+
+	err = tmpl.Execute(w, Stats)
+	HandleError(err)
+}
