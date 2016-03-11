@@ -32,6 +32,7 @@ const text = `
 	Average Age             {{.AverageAge}}
 	Average Viewers         {{.AverageViewers}}
 	Average Followers       {{.AverageFollowers}}
+	
 `
 
 // RenderText renders the template to the specified writer.
