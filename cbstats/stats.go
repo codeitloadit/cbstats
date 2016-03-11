@@ -22,12 +22,12 @@ func PopulateStats() {
 	Stats.BroadcasterCounts = make(map[string]uint)
 	Stats.ViewerCounts = make(map[string]uint)
 	Stats.TagCounts = make(map[string]uint)
-	// Initializing the types to remove logic from the template and avoid <no value>
+	// Initializing the types to remove logic from the template and avoid <no value> rendering.
 	Stats.TypeCounts = map[string]uint{
-		"public": 0,
+		"public":  0,
 		"private": 0,
-		"group": 0,
-		"away": 0,
+		"group":   0,
+		"away":    0,
 	}
 
 	var totalAge uint
