@@ -1,5 +1,5 @@
 # cbstats
-
+## Command line tool for viewing cb stats.
 Example Output:
 <pre>
 Fetching CB Stats.....
