@@ -1,5 +1,9 @@
 # cbstats
 ## Command line tool for viewing cb stats.
+
+Downloads:
+ * [Mac](https://github.com/codeitloadit/cbstats/blob/master/bin/cbstats?raw=true)
+
 Example Output:
 <pre>
 Fetching CB Stats.....
